@@ -127,4 +127,278 @@ ________________________________________
 ________________________________________
 Nagios steps
  
+MAVEN JAVA – FREESTYLE PIPELINE
 
+Job 1: MavenJava_Build
+New Item → Freestyle Project
+Project name: MavenJava_Build
+
+Source Code Management
+Git URL, Branch: */main or */master
+
+Add Build Step → Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: clean
+
+Add Build Step → Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: install
+
+Post-Build Actions
+Archive the artifacts
+Files to archive: **/*
+
+Build other projects
+Projects to build: MavenJava_Test
+Trigger: Only if build is stable
+
+---
+
+Job 2: MavenJava_Test
+New Item → Freestyle Project
+Project name: MavenJava_Test
+
+Build Environment
+Check: Delete workspace before build starts
+
+Build Steps
+Copy artifacts from another project
+Project name: MavenJava_Build
+Build: Stable build only
+Artifacts to copy: **/*
+
+Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: test
+
+Post-Build Actions
+Archive the artifacts
+Files to archive: **/*
+---
+
+Pipeline View for Maven Java
+Dashboard → + → Build Pipeline View
+Name: MavenJava_Pipeline
+Layout: Based on upstream/downstream
+Initial Job: MavenJava_Build
+---
+
+MAVEN WEB – PIPELINE (BUILD → TEST → DEPLOY)
+
+Job 1: MavenWeb_Build
+New Item → Freestyle Project
+Project name: MavenWeb_Build
+
+Source Code Management
+Git URL, Branch: */main or master
+
+Build Steps
+Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: clean
+
+Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: install
+
+Post-Build Actions
+Archive the artifacts
+Files to archive: **/*
+
+Build other projects
+Projects to build: MavenWeb_Test
+Trigger: Only if build is stable
+---
+
+Job 2: MavenWeb_Test
+New Item → Freestyle Project
+Project name: MavenWeb_Test
+
+Build Environment
+Check: Delete the workspace before build starts
+
+Build Steps
+Copy artifacts from another project
+Project name: MavenWeb_Build
+Build: Stable build only
+Artifacts to copy: **/*
+
+Invoke top-level Maven targets
+Maven version: MAVEN_HOME
+Goals: test
+
+Post-Build Actions
+Archive the artifacts
+Files to archive: **/*
+
+Build other projects
+Projects to build: MavenWeb_Deploy
+---
+
+Job 3: MavenWeb_Deploy
+New Item → Freestyle Project
+Project name: MavenWeb_Deploy
+
+Build Environment
+Check: Delete the workspace before build starts
+
+Build Steps
+Copy artifacts from another project
+Project name: MavenWeb_Test
+Build: Stable build only
+Artifacts to copy: **/*
+
+Post-Build Actions
+Deploy WAR/EAR to a container
+WAR/EAR File: **/*.war
+Context path: Webpath
+Add container: Tomcat 9.x remote
+Credentials: admin / 1234
+Tomcat URL: [https://localhost:8080/]
+---
+
+Pipeline View for Maven Web
+Dashboard → + → Build Pipeline View
+Name: MavenWeb_Pipeline
+Layout: Based on upstream/downstream
+Initial Job: MavenWeb_Build
+---
+SCRIPTED PIPELINE 
+Advanced Project Options
+Definition: Choose “Pipeline script”
+
+Pipeline Script-
+
+pipeline {
+    agent any
+
+    tools {
+        jdk 'JAVA_HOME'
+        maven 'maven'
+    }
+
+    stages {
+
+        stage('git repo & clean') {
+            steps {
+                bat "rmdir /s /q 23BD1A051X_se_java || exit 0"
+                bat "git clone https://github.com/SarvikaSomishetty/23BD1A051X_se_java.git"
+                bat "mvn clean -f 23BD1A051X_se_java/pom.xml"
+            }
+        }
+
+        stage('install') {
+            steps {
+                bat "mvn install -f 23BD1A051X_se_java/pom.xml"
+            }
+        }
+
+        stage('test') {
+            steps {
+                bat "mvn test -f 23BD1A051X_se_java/pom.xml"
+            }
+        }
+
+        stage('package') {
+            steps {
+                bat "mvn package -f 23BD1A051X_se_java/pom.xml"
+            }
+        }
+    }
+}
+
+---
+MINIKUBE
+minikube start
+minikube kubectl -- get pods -A
+
+kubectl create deployment mynginx --image=nginx
+kubectl get deployments
+kubectl get pods
+kubectl describe pods
+kubectl expose deployment mynginx --type=NodePort --port=80 --target-port=80
+kubectl scale deployment mynginx --replicas=4
+kubectl get service mynginx
+kubectl port-forward svc/mynginx 8081:80
+
+NAGIOS
+docker pull jasonrivers/nagios:latest
+docker run --name nagiosdemo -p 8888:80 jasonrivers/nagios:latest
+http://localhost:8888
+	Username: nagiosadmin
+	Password: nagios
+---
+NGROK
+Get your auth token from dashboard.
+Run in ngrok terminal:
+ngrok config add-authtoken <your_token>
+ngrok http 8888(copy url)
+Open GitHub → Repo → Settings → Webhooks → Add Webhook
+Payload URL:
+https://your-ngrok-url/github-webhook/
+Content type: application/json
+Jenkins Dashboard → Select your job → Configure
+Build Triggers → enable:
+GitHub hook trigger for GITScm polling
+
+---
+GMAIL
+Go to Security → App Passwords
+App: Other
+Name: Jenkins-Demo
+Generate → copy 16-digit password.
+Configure Jenkins Email Settings
+Manage Jenkins → Configure System
+
+A. Email Notification
+SMTP Server: smtp.gmail.com
+Use SMTP Auth: enabled
+Username: sarvikashetty30@gmail.com
+Password: 16-digit App Password
+Use SSL: enabled
+SMTP Port: 465
+Reply-To: sarvikashetty30@gmail.com
+
+B. Extended Email Notification
+SMTP Server: smtp.gmail.com
+SMTP Port: 465
+Use SSL: enabled
+Credentials: Gmail + App Password
+Content type: text/html
+
+Configure Job-level Email Notification
+Job → Configure → Post-build Actions
+Add: Editable Email Notification
+Recipient list: somisettysarvika@gmail.com
+Triggers:Always
+---
+
+AWS
+Open course invitation mail → Start → AWS Academy → Student login → Modules → Launch AWS Academy Lab → Wait for AWS to turn green → Click AWS.
+Click EC2 → Launch Instance
+Stage 1: Name → ubuntu
+Stage 2: AMI → Ubuntu Server (Free Tier Eligible)
+Stage 3: Architecture → 64-bit
+Stage 4: Instance type → t2.micro
+Stage 5: Create new keypair (.pem file) → save to AWS folder
+Launch Instance
+Connect
+Copy SSH command from AWS (ssh -i …)
+Open PowerShell or Git Bash → cd to folder containing .pem file
+Run ssh command to connect to EC2 Ubuntu.
+
+sudo apt update
+sudo apt-get install docker.io
+sudo apt install git
+sudo apt install nano
+
+git clone <repo-url>
+cd into folder and run ls
+
+sudo docker build -t mywebapp .
+sudo docker run -d -p 80:80 mywebapp
+
+If app does not load → fix Security Group
+Go to EC2 → Security → Security Groups
+Edit inbound rules → Add Rule
+Custom TCP → Port 9090 → Source 0.0.0.0/0
